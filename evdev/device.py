@@ -1,7 +1,7 @@
 # encoding: utf-8
 
 import os
-from select import select
+#from select import select
 from collections import namedtuple
 
 from evdev import _input, _uinput, ecodes, util
@@ -119,6 +119,17 @@ class InputDevice(object):
                 self.close()
             except OSError:
                 pass
+
+    def ioctl(self, fd, request, arg=0, mutate_flag=True):
+        req = []
+        mask = 0xFF
+        mv = memoryview(arg)
+        for i in range(4):
+            req.append((request & mask) >> (8 *i))
+            mask = mask << 8
+        outputx = _input.ioctl(self.fd, req, len(mv))
+        for i in range(len(mv)):
+            mv[i] = outputx[i]
 
     def _capabilities(self, absinfo=True):
         res = {}
@@ -251,8 +262,9 @@ class InputDevice(object):
         '''Enter an endless ``select()`` loop that yields input events.'''
 
         while True:
-            r, w, x = select([self.fd], [], [])
+            r, w, x = _input.select([self.fd], [], [])
             for event in self.read():
+                print(event)
                 yield event
 
     def read(self):
